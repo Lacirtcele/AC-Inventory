@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Air Conditioning Unit Inventory | UCV</title>
+  <style>
+    @page {
+      size: 8.5in 11in;
+      margin-top: 0.05in;
+    }
+    body {
+      margin-top: 20px;
+      margin-left: 240px;
+      margin-right: 240px;
+      margin-bottom: 240px;
+      padding: 0;
+      height: 100vh;
+      background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), url('background.jpg');
+      background-size: cover;
+    }
+    .header {
+      text-align: center;
+    }
+    .certificate-title {
+      margin-top: 10px;
+      text-align: center;
+      letter-spacing: 6px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 11px;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 5px;
+      text-align: center;
+    }
+    .prepared-by {
+      margin-top: 30px;
+      text-align: left;
+      font-size: 13px;
+    }
+    input, select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .no-print {
+      display: block;
+    }
+    @media print {
+      .no-print {
+        display: none;
+      }
+      body * {
+        visibility: hidden;
+      }
+      .print-area, .print-area * {
+        visibility: visible;
+      }
+      .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="print-area">
+  <div class="header">
+    <img src="C:\Users\Owner\Pictures\UCV.png" alt="logo" width="100" style="float: left;">
+      <img src="C:\Users\Owner\Pictures\oppm logo.png" alt="logo" width="100" style="float: right;">
+    <h3>UNIVERSITY OF CAGAYAN VALLEY</h3>
+    <h4>OFFICE OF THE PHYSICAL PLANT AND MAINTENANCE</h4>
+    <h3>AIRCONDITIONING UNIT INVENTORY</h3>
+    <p id="printFile"></p>
+    <p id="printDate"></p>
+  </div>
+  <table id="inventoryTable">
+    <thead>
+      <tr>
+        <th>ROOM/OFFICES</th>
+        <th>TYPE/BRAND</th>
+        <th>SERIAL NUMBER</th>
+        <th>INDOOR MODEL</th>
+        <th>INDOOR SERIAL NUMBER</th>
+        <th>OUTDOOR MODEL</th>
+        <th>OUTDOOR SERIAL NUMBER</th>
+        <th>STATUS</th>
+        <th>YEAR INSTALLED</th>
+        <th>REMARKS</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="prepared-by">
+    <p><strong>Prepared by:</strong></p>
+    <br>
+    <p>ENGR. GLENN D. LUNA, MBA</p>
+    <p>Electrical Supervisor</p>
+  </div>
+</div>
+
+<div class="no-print">
+  <h2>AC Unit Entry Form</h2>
+  <input list="roomList" id="room" placeholder="Room/Office">
+  <datalist id="roomList"></datalist>
+  <input id="brand" placeholder="Type/Brand">
+  <input id="serial" placeholder="Serial Number">
+  <input id="indoorModel" placeholder="Indoor Model">
+  <input id="indoorSN" placeholder="Indoor Serial No.">
+  <input id="outdoorModel" placeholder="Outdoor Model">
+  <input id="outdoorSN" placeholder="Outdoor Serial No.">
+  <input id="status" placeholder="Status">
+  <input id="year" placeholder="Year Installed">
+  <input id="remarks" placeholder="Remarks">
+
+  <button onclick="addEntry()">Add Entry</button>
+  <input type="text" id="filename" placeholder="Enter file name">
+  <button onclick="saveData()">Save Data</button>
+  <select id="fileList" onchange="loadFromDropdown(this.value)">
+    <option value="">-- Select saved file --</option>
+  </select>
+  <button onclick="deleteFile()">Delete</button>
+  <input type="password" id="editPassword" placeholder="Enter password to edit/delete">
+  <button onclick="enableEditing()">Enable Editing</button>
+  <button onclick="window.print()">Print</button>
+
+  <hr>
+  <label for="filterRoom"><strong>Filter by Room/Office:</strong></label>
+  <select id="filterRoom" onchange="filterByRoom()">
+    <option value="">-- Show All --</option>
+  </select>
+  <button onclick="clearFilter()">Clear Filter</button>
+</div>
+
+<script>
+const fields = [
+  'room', 'brand', 'serial', 'indoorModel', 'indoorSN',
+  'outdoorModel', 'outdoorSN', 'status', 'year', 'remarks'
+];
+
+const EDIT_PASSWORD = "admin123";
+let editingEnabled = false;
+
+function updateFileListDropdown() {
+  const dropdown = document.getElementById("fileList");
+  dropdown.innerHTML = '<option value="">-- Select saved file --</option>';
+  for (let key in localStorage) {
+    if (key.startsWith("acdata_")) {
+      const name = key.replace("acdata_", "");
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      dropdown.appendChild(option);
+    }
+  }
+}
+
+function getInputValues() {
+  return fields.map(id => document.getElementById(id).value.trim());
+}
+
+function clearInputs() {
+  fields.forEach(id => document.getElementById(id).value = '');
+}
+
+function addEntry() {
+  if (!editingEnabled) {
+    alert("Please enter the correct password to enable editing.");
+    return;
+  }
+  const values = getInputValues();
+  if (values.some(v => v === '')) {
+    alert("Please complete all fields.");
+    return;
+  }
+  const tbody = document.querySelector('#inventoryTable tbody');
+  const tr = document.createElement('tr');
+  values.forEach(v => {
+    const td = document.createElement('td');
+    td.textContent = v;
+    td.contentEditable = "true";
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+  clearInputs();
+  updateRoomFilterOptions();
+  updateRoomDatalistOptions();
+}
+
+function saveData() {
+  const filename = document.getElementById("filename").value.trim();
+  if (!filename) {
+    alert("Enter a file name to save.");
+    return;
+  }
+  const tableData = Array.from(document.querySelectorAll('#inventoryTable tbody tr')).map(tr =>
+    Array.from(tr.cells).map(td => td.textContent.trim())
+  );
+  localStorage.setItem("acdata_" + filename, JSON.stringify(tableData));
+  updateFileListDropdown();
+  alert("✅ Data saved under file: " + filename);
+}
+
+function loadData(filename) {
+  const raw = localStorage.getItem("acdata_" + filename);
+  const tbody = document.querySelector('#inventoryTable tbody');
+  tbody.innerHTML = '';
+  if (!raw) {
+    alert("⚠️ No data found for file: " + filename);
+    return;
+  }
+  const data = JSON.parse(raw);
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    row.forEach(cell => {
+      const td = document.createElement('td');
+      td.textContent = cell;
+      td.contentEditable = editingEnabled ? "true" : "false";
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  document.getElementById("filename").value = filename;
+  document.getElementById("printFile").textContent = "File Name: " + filename;
+  document.getElementById("printDate").textContent = "Date Printed: " + new Date().toLocaleDateString();
+  updateRoomFilterOptions();
+  updateRoomDatalistOptions();
+}
+
+function loadFromDropdown(value) {
+  if (value) loadData(value);
+}
+
+function deleteFile() {
+  const selectedFile = document.getElementById("fileList").value;
+  const passwordInput = document.getElementById("editPassword").value;
+  if (!selectedFile) {
+    alert("Please select a file to delete.");
+    return;
+  }
+  if (passwordInput !== EDIT_PASSWORD) {
+    alert("❌ Incorrect password. Cannot delete file.");
+    return;
+  }
+  if (confirm(`Are you sure you want to delete the file: "${selectedFile}"?`)) {
+    localStorage.removeItem("acdata_" + selectedFile);
+    updateFileListDropdown();
+    document.getElementById("inventoryTable").querySelector("tbody").innerHTML = "";
+    updateRoomFilterOptions();
+    updateRoomDatalistOptions();
+    alert(`🗑️ File "${selectedFile}" deleted.`);
+  }
+}
+
+function enableEditing() {
+  const passwordInput = document.getElementById("editPassword").value;
+  if (passwordInput === EDIT_PASSWORD) {
+    editingEnabled = true;
+    const cells = document.querySelectorAll('#inventoryTable td');
+    cells.forEach(cell => cell.contentEditable = "true");
+    alert("✅ Editing enabled.");
+  } else {
+    alert("❌ Incorrect password. Editing not allowed.");
+  }
+}
+
+function updateRoomFilterOptions() {
+  const select = document.getElementById("filterRoom");
+  const tbody = document.querySelector("#inventoryTable tbody");
+  const rooms = new Set();
+
+  Array.from(tbody.rows).forEach(row => {
+    const room = row.cells[0].textContent.trim();
+    if (room) rooms.add(room);
+  });
+
+  select.innerHTML = '<option value="">-- Show All --</option>';
+  Array.from(rooms).sort().forEach(room => {
+    const option = document.createElement("option");
+    option.value = room;
+    option.textContent = room;
+    select.appendChild(option);
+  });
+}
+
+function updateRoomDatalistOptions() {
+  const datalist = document.getElementById("roomList");
+  const tbody = document.querySelector("#inventoryTable tbody");
+  const rooms = new Set();
+
+  Array.from(tbody.rows).forEach(row => {
+    const room = row.cells[0].textContent.trim();
+    if (room) rooms.add(room);
+  });
+
+  datalist.innerHTML = "";
+  Array.from(rooms).sort().forEach(room => {
+    const option = document.createElement("option");
+    option.value = room;
+    datalist.appendChild(option);
+  });
+}
+
+function filterByRoom() {
+  const filterValue = document.getElementById("filterRoom").value;
+  const rows = document.querySelectorAll("#inventoryTable tbody tr");
+
+  rows.forEach(row => {
+    const room = row.cells[0].textContent.trim();
+    row.style.display = (filterValue === "" || room === filterValue) ? "" : "none";
+  });
+}
+
+function clearFilter() {
+  document.getElementById("filterRoom").value = "";
+  filterByRoom();
+}
+
+window.onload = updateFileListDropdown;
+</script>
+</body>
+</html>
